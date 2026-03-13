@@ -1,5 +1,13 @@
 import telebot
-from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+import os
+
+try:
+    TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+    TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+    if not TELEGRAM_TOKEN:
+        from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+except ImportError:
+    from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
