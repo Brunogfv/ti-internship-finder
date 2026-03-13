@@ -1,0 +1,52 @@
+name: "TI Internship Finder - Scheduled Run"
+
+on:
+  schedule:
+    - cron: '0 12 * * *'  # Executa diariamente às 12:00 UTC (9:00 BRT)
+  workflow_dispatch: {}
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run scraper
+        env:
+          ALLOW_PRESENCIAL: '1'
+          PRESENCIAL_CIDADES: 'garanhuns'
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          SMTP_SERVER: 'smtp.gmail.com'
+          SMTP_PORT: '587'
+        run: |
+          python main.py
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add jobs.csv jobs.db logs/system.log
+          git diff --quiet || (
+            git commit -m "[Automated] Atualiza vagas de estágio" &&
+            git push origin HEAD:${{ github.ref_name }}
+          )
+        shell: bash
