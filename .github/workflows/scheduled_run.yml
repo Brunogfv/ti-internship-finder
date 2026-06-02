@@ -1,5 +1,8 @@
 name: "TI Internship Finder - Scheduled Run"
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   schedule:
     - cron: '0 12 * * *'
@@ -11,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -25,9 +28,8 @@ jobs:
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
 
-      - name: Restore jobs database cache
+      - name: Cache jobs database
         uses: actions/cache@v4
-        id: cache-db
         with:
           path: jobs.db
           key: jobs-db-${{ github.run_id }}
@@ -45,27 +47,13 @@ jobs:
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           SMTP_SERVER: 'smtp.gmail.com'
           SMTP_PORT: '587'
-        run: |
-          python main.py || echo "Scraper finalizado"
-
-      - name: Update jobs database cache
-        if: always()
-        uses: actions/cache@v4
-        with:
-          path: jobs.db
-          key: jobs-db-${{ github.run_id }}
+        run: python main.py
 
       - name: Commit results
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ -f jobs.csv ] && [ -s jobs.csv ] && [ "$(wc -l < jobs.csv)" -gt 1 ]; then
-            git add jobs.csv
-          fi
-          if [ -f logs/system.log ]; then
-            git add logs/system.log
-          fi
-          git diff --quiet || (
-            git commit -m "[Automated] Atualiza vagas de estágio" &&
-            git push origin HEAD:${{ github.ref_name }}
-          )
+          git add jobs.csv 2>/dev/null || true
+          git add logs/system.log 2>/dev/null || true
+          git diff --quiet --cached || git commit -m "[Automated] Atualiza vagas de estágio"
+          git push origin HEAD:${{ github.ref_name }} 2>/dev/null || true
