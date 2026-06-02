@@ -69,4 +69,4 @@ Agora o projeto inclui um workflow GitHub Actions que executa o scraper automati
 - ✅ Scheduler
 - ✅ API REST
 - ⚠️ Notificações desabilitadas (configurar tokens)
-- ⚠️ Scrapers podem precisar ajustes para capturar mais dados
+- ⚠️ Scrapers podem precisar ajustes para capturar mais dados"# find-job" 
