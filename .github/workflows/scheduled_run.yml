@@ -2,7 +2,7 @@ name: "TI Internship Finder - Scheduled Run"
 
 on:
   schedule:
-    - cron: '0 12 * * *'  # Executa diariamente às 12:00 UTC (9:00 BRT)
+    - cron: '0 12 * * *'
   workflow_dispatch: {}
 
 jobs:
@@ -12,24 +12,32 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-        with:
-          persist-credentials: true
-          fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Restore jobs database cache
+        uses: actions/cache@v4
+        id: cache-db
+        with:
+          path: jobs.db
+          key: jobs-db-${{ github.run_id }}
+          restore-keys: |
+            jobs-db-
 
       - name: Run scraper
         env:
           ALLOW_PRESENCIAL: '1'
-          PRESENCIAL_CIDADES: 'garanhuns'
+          PRESENCIAL_CIDADES: 'garanhuns,recife'
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
@@ -38,17 +46,26 @@ jobs:
           SMTP_SERVER: 'smtp.gmail.com'
           SMTP_PORT: '587'
         run: |
-          python main.py || echo "Scraper falhou, mas continuando..."
+          python main.py || echo "Scraper finalizado"
+
+      - name: Update jobs database cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: jobs.db
+          key: jobs-db-${{ github.run_id }}
 
       - name: Commit results
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          [ -f jobs.csv ] && git add jobs.csv
-          [ -f jobs.db ] && git add jobs.db
-          [ -f logs/system.log ] && git add logs/system.log
+          if [ -f jobs.csv ] && [ -s jobs.csv ] && [ "$(wc -l < jobs.csv)" -gt 1 ]; then
+            git add jobs.csv
+          fi
+          if [ -f logs/system.log ]; then
+            git add logs/system.log
+          fi
           git diff --quiet || (
             git commit -m "[Automated] Atualiza vagas de estágio" &&
             git push origin HEAD:${{ github.ref_name }}
           )
-        shell: bash

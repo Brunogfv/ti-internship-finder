@@ -1,8 +1,13 @@
 import sqlite3
 import hashlib
+import csv
+import os
+from typing import Any
+from config import DB_PATH, CSV_PATH
 
-def create_db():
-    conn = sqlite3.connect('jobs.db')
+
+def create_db() -> None:
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS jobs (
         id INTEGER PRIMARY KEY,
@@ -18,11 +23,11 @@ def create_db():
     conn.commit()
     conn.close()
 
-def save_jobs_to_db(jobs):
-    create_db()
-    conn = sqlite3.connect('jobs.db')
+
+def save_jobs_to_db(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    new_jobs = []
+    new_jobs: list[dict[str, Any]] = []
     for job in jobs:
         job_hash = hashlib.md5(job['link'].encode()).hexdigest()
         try:
@@ -31,16 +36,20 @@ def save_jobs_to_db(jobs):
                       (job['titulo'], job['empresa'], job['localizacao'], job['tipo'], job['link'], job['data_publicacao'], job['descricao_resumida'], job_hash))
             new_jobs.append(job)
         except sqlite3.IntegrityError:
-            pass  # Já existe
+            pass
     conn.commit()
     conn.close()
     return new_jobs
 
-def export_to_csv(jobs):
-    import csv
-    with open('jobs.csv', 'w', newline='', encoding='utf-8') as csvfile:
+
+def export_to_csv(jobs: list[dict[str, Any]]) -> None:
+    if not jobs:
+        return
+    file_exists = os.path.isfile(CSV_PATH)
+    with open(CSV_PATH, 'a', newline='', encoding='utf-8') as csvfile:
         fieldnames = ['titulo', 'empresa', 'localizacao', 'tipo', 'link', 'data_publicacao', 'descricao_resumida']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
+        if not file_exists or os.path.getsize(CSV_PATH) == 0:
+            writer.writeheader()
         for job in jobs:
             writer.writerow(job)

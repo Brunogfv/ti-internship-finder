@@ -3,4 +3,4 @@ __pycache__/
 jobs.db
 jobs.csv
 logs/*.log
-config.py
+.env

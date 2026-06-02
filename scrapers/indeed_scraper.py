@@ -1,36 +1,27 @@
-import requests
-from bs4 import BeautifulSoup
-import time
-from datetime import datetime
+from scrapers.base_scraper import BaseScraper
 
-def scrape_indeed():
-    jobs = []
-    url = "https://br.indeed.com/jobs?q=est%C3%A1gio+TI&l="
-    headers = {"User-Agent": "Mozilla/5.0"}
 
-    try:
-        response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.text, 'html.parser')
+def _build_indeed_link(href):
+    if not href:
+        return ""
+    if href.startswith("http"):
+        return href
+    return "https://br.indeed.com" + href
 
-        job_cards = soup.find_all('div', class_='job_seen_beacon')
 
-        for card in job_cards[:10]:
-            title = card.find('h2').text.strip() if card.find('h2') else ''
-            company = card.find('span', class_='companyName').text.strip() if card.find('span', class_='companyName') else ''
-            location = card.find('div', class_='companyLocation').text.strip() if card.find('div', class_='companyLocation') else ''
-            link = "https://br.indeed.com" + card.find('a')['href'] if card.find('a') else ''
-            jobs.append({
-                'titulo': title,
-                'empresa': company,
-                'localizacao': location,
-                'tipo': 'remoto' if 'remoto' in location.lower() else 'presencial',
-                'link': link,
-                'data_publicacao': datetime.now().strftime('%Y-%m-%d'),
-                'descricao_resumida': ''
-            })
-            time.sleep(1)
+scraper = BaseScraper(
+    name="Indeed",
+    url="https://br.indeed.com/jobs?q=est%C3%A1gio+TI&l=",
+    card_selector="div.job_seen_beacon, div.cardOutline, li.css-5lf1m8",
+    title_selector="h2.jobTitle a, h2 a, a.jobtitle, h3.jobTitle a, .jcs-JobTitle",
+    company_selector="span[data-testid='company-name']",
+    location_selector="div[data-testid='text-location']",
+    link_selector=".jcs-JobTitle",
+    card_selector_fallback="div.jobsearch-SerpJobCard",
+    link_builder=_build_indeed_link,
+    wait_timeout=5000,
+)
 
-    except Exception as e:
-        print(f"Erro no scraping Indeed: {e}")
 
-    return jobs
+def scrape_indeed(max_jobs=15):
+    return scraper.scrape(max_jobs)
