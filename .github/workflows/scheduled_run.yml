@@ -1,11 +1,9 @@
 name: "TI Internship Finder - Scheduled Run"
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 on:
   schedule:
     - cron: '0 12 * * *'
+    - cron: '0 0 * * *'
   workflow_dispatch: {}
 
 jobs:
